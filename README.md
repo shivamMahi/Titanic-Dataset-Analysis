@@ -2,7 +2,7 @@
 
 -The dataset is taken from Kaggle.
 
--Titanic dataset contains 891 rows and 12 columns.*
+-Titanic dataset contains 891 rows and 12 columns.
 
 -This analysis consist of 2 parts. 
   *Part-1 is Exploratory Data Analytsis. 
