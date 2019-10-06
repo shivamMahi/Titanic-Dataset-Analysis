@@ -1,0 +1,1239 @@
+---
+title: "Titanic DataSet Analysis Exploratory Analysis Part 1]"
+output:
+  html_document:
+    always_allow_html: yes
+    df_print: paged
+  pdf_document: default
+  word_document: default
+---
+. Titanic dataset contains 891 rows and 12 columns.\n
+
+. DataSet is downloaded from kaggle \n
+
+. Notebook contains the indepth analysis of dataset including Data Cleaning,
+  data wrangling, Data Visualization, Probability, Descriptive and 
+  Inferential Statistics.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)  
+```
+
+  <b>Importing Libraries</b>
+```{r}
+library(dplyr)
+library(ggplot2)
+library(plotly)
+library(ggthemes)
+library(tidyr)
+library(sqldf)
+
+```
+
+  <b>Loading and viewing the structure of data</b>
+```{r}
+titanic <- read.csv("C:/Users/Hp/Desktop/titanic.csv",sep = ",",stringsAsFactors = TRUE,na.strings = NA,header = T)
+
+str(titanic)
+dim(titanic)
+summary(titanic)
+```
+
+ <b>Cleaning and changing the schema of data</b>
+```{r}
+
+# Removing the NULL values 
+titanic<- na.omit(titanic)
+dim(titanic)
+
+#We can use sapply function to get the nÂº of missing values in our dataset
+sapply(titanic,function(x) sum(is.na(x)))
+
+# Converting to Factors
+
+titanic$Pclass <- as.factor(titanic$Pclass)
+titanic$Survived <- as.factor(titanic$Survived)
+titanic$Sex <- as.factor(titanic$Sex)
+titanic$Embarked <- as.factor(titanic$Embarked)
+
+titanic$Survived<-ifelse(titanic$Survived==0,"Not Survivied","Survived")
+
+titanic$Embarked<- ifelse(titanic$Embarked=="C","Cherbourg",(ifelse(titanic$Embarked=="Q","Queenstown","vSouthampton")))
+
+```
+<br>
+
+
+Q1) <b> What was the survival rate by gender? </b>
+
+```{r}
+###Using DPLYR
+Survival_Count<-titanic %>%
+  select(Sex,Survived) %>%
+  group_by(Sex,Survived) %>%
+  summarise(total = n())
+
+Survival_Count
+```
+
+```{r}
+### Using GGPLOT2
+g2<- ggplot(titanic, aes(x = Sex, fill = Survived)) + 
+  theme_economist() +
+  geom_bar() +
+  labs(y = "Passenger Count",
+       title = "Titanic Survival Rates by Sex") +
+  scale_y_continuous(limits = c(0,500),breaks = seq(0,500,100))
+
+ggplotly(g2)
+
+```
+<br>
+<i><b>=> By seeing the graph of survival rate of Gender, We can conclude that Survival count of female is more than male.</b></i>
+
+
+<br>
+
+Q2) <b> What was the survival rate by class of ticket?  </b>
+
+```{r}
+### Using DPLYR
+Survival_Count_By_Class <- titanic %>%
+  select(Pclass,Survived) %>%
+  group_by(Pclass,Survived) %>%
+  summarise(Total= n())
+
+Survival_Count_By_Class
+```
+
+```{r}
+### Using GGPLOT2
+g3<-ggplot(titanic, aes(x = Pclass, fill = Survived)) + 
+  theme_solarized() +
+  geom_bar() +
+  labs(y = "Passenger Count",
+       title = "Titanic Survival Rates by Pclass") +
+  scale_y_continuous(limits = c(0,400))
+
+ggplotly(g3)
+
+```
+<br>
+<b><i>=> By seeing the graph of survival rate by PClass, We can conclude that Survival count of people in Pclass 1 is more than others.</i></b>
+
+
+<br>
+
+Q3) <b> What was the survival rate?  </b>
+
+```{r}
+g1<-ggplot(titanic, aes(x = Survived)) + 
+  theme_wsj()+
+  geom_bar(fill=rainbow(2),col="black") +
+  labs(y = "Passenger Count",
+       title = "Titanic Survival Rates")
+ggplotly(g1)
+```
+<br>
+<b><i>=> By seeing the graph of survival rate, We can conclude that 285 people Survived and 418 were not Survived .</i></b>
+
+
+<br>
+
+Q4) <b> What is the distribution of passenger ages?  </b>
+
+
+```{r}
+### using DPLYR
+age_distribution <- titanic %>%
+  select(Age) %>%
+  mutate(distribution = cut(Age, breaks = seq(0,80,20)))%>%
+  group_by(distribution) %>%
+  summarise(total_count= n())
+
+age_distribution <- na.omit(age_distribution)
+age_distribution
+```
+
+```{r}
+### USing GGPLOT2
+g5<-ggplot(titanic, aes(x = Age)) +
+  theme_stata() +
+  geom_histogram(binwidth = 5,col="black",fill=rainbow(17))+
+  labs(y = "Passenger Count",
+       x = "Age (binwidth = 5)",
+       title = "Titanic Age Distribtion")
+
+ggplotly(g5)
+```
+<br>
+<b><i>#=> By seeing the graph of Distribution of Age, We can conclude that people between range (20,40) were highest compared to other age group.</i></b>
+
+
+<br>
+
+<b> We can show by Density Graph also </b>
+```{r}
+g6<-ggplot(titanic, aes(x = Age)) +
+  theme_dark() +
+  geom_density(alpha = 0.5) +
+  labs(y = "Passenger Count",
+       x = "Age (binwidth = 5)",
+       title = "Titanic Age Distribtion") 
+
+ggplotly(g6)
+```
+<br>
+
+
+Q5)<b> What was the survival rate by class of ticket and gender?  </b>
+
+```{r}
+##Using DPLYR
+Survival_Count_By_Sex_And_Class<- titanic %>%
+  select(Sex,Survived,Pclass) %>%
+  group_by(Pclass,Sex,Survived) %>%
+  summarise(Survival_Count = n()) 
+
+Survival_Count_By_Sex_And_Class
+```
+
+```{r}
+### Using GGPLOT2 
+g4<-ggplot(titanic, aes(x = Sex, fill = Survived)) + 
+  theme_base() +
+  facet_wrap(~ Pclass) +
+  geom_bar(col="black") +
+  labs(y = "Passenger Count",
+       title = "Titanic Survival Rates by Pclass and Sex")
+
+ggplotly(g4)
+```
+<br>
+<b><i>#=> By seeing the graph of survival rate by PClass, We can conclude that Survival count of people in PClass 1 are more compared to others because they pay more for PClass 1 ticket.</i></b>
+
+
+<br>
+
+Q6)<b> What are the survival rates by age?  </b>
+
+```{r}
+titanic$Age<- round(titanic$Age)
+g7<- ggplot(titanic, aes(x = Age, fill = Survived)) +
+  theme_economist_white() +
+  geom_histogram(bins = 30,col="black")+
+  labs(y = "Passenger Count",
+       x = "Age (binwidth = 5)",
+       title = "Titanic Survival Rates by Age")
+
+ggplotly(g7)
+
+```
+<br>
+<b><i>=> By seeing the graph of survival rate by Age, We can conclude that maximum people ranging between (20,40) and maximum people who died are also in the same range.</i></b>
+
+
+<br>
+
+```{r}
+#Distributions can even be shown using points
+g8<-ggplot(age_distribution,aes(distribution,total_count,fill=distribution)) +
+  theme_base() +
+  geom_count()+
+  labs(x = "Age Distribution",
+       title = "Distribution by Total Counts")
+
+ggplotly(g8)
+```
+<br>
+
+<b><i>We can See Box Plot for more details</i></b>
+
+```{r}
+g9<-ggplot(titanic, aes(x = Survived, y = Age,fill=Survived)) +
+  theme_excel()+
+  geom_boxplot() +
+  labs(y = "Age",
+       x = "Survived",
+       title = "Titanic Survival Rates by Age")
+
+ggplotly(g9)
+```
+<br>
+<b><i>We can see Violin Graph for the summary as well</i></b>
+
+```{r}
+g10<- ggplot(titanic,aes(titanic$Survived,titanic$Age,fill=titanic$Survived)) +
+  theme_excel_new()+
+  geom_abline(intercept =median(titanic$Age)) + 
+  geom_violin() +
+  labs(y = "Age distribution",
+       title = "Titanic Survival Rates by Age")
+
+ggplotly(g10)
+```
+<br>
+<b><i>=> By seeing the survival rate by Age, We can conclude by seeing the median line that Non survival people are mostly around 25 and ranges between (20,40). And range of non Survival are (1,74).</i></b>
+
+
+<br>
+
+Q34)<b>Distribution based on Gender age fare survival</b>
+
+```{r}
+g36<-ggplot(titanic, aes(x =Fare,y=Age)) +
+   theme_stata()  +
+  facet_wrap(~Sex) +
+  geom_point(aes(col=Survived),position = "jitter",pch=8,cex=1.5) +
+  geom_smooth(method = "lm",se=F)+
+  geom_hline(yintercept = median(titanic$Age))+
+  labs(y = "Age",
+       x = "Fare",
+       title = "Titanic Age Vs Fare wrt Sex and Survived")
+
+
+ggplotly(g36)
+```
+<br>
+
+
+<b><i> 1)=> By seeing the plot we can see there is a horizontal line representing median of Age.
+
+2)=> We can see the distribution of Fare and relation between Fare and Age using a Regression Line.
+
+3)=> By seeing the regression line we can distinguish that males have paid more than females as the regression line is always above the median for males.
+
+4)=> We can also see females are more survived compared to males.</i></b>
+
+<br>
+
+Q7)<b> What is the survival rates by age when segmented by gender and class of ticket?  </b>
+
+```{r}
+g11<- ggplot(titanic, aes(x = Age, fill = Survived)) +
+  theme_stata() +
+  facet_wrap(Sex ~ Pclass) +
+  geom_density(alpha = 0.5) +
+  labs(y = "Total Count",
+       x = "Age",
+       title = "Titanic Survival Rates by Age, Pclass and Sex")
+
+ggplotly(g11)
+```
+<br>
+
+
+<b><i>=> By seeing the graph of survival rate by Age,PClass and Sex, We can conclude that Survival count of female is more than male and specially in the range betwen (20,40) more womens survived but more males died between the same range.</i></b>
+
+<br>
+
+Q8)<b> Top 10 people who paid highest ticket price </b>
+
+```{r}
+top_10_ticket_price_payers <- titanic %>%
+  select(Name,Fare)%>%
+  arrange(desc(Fare)) %>%
+  top_n(10)
+
+top_10_ticket_price_payers$Fare<-round(top_10_ticket_price_payers$Fare)
+
+top_10_ticket_price_payers
+```
+<br>
+
+Q9)<b>Total people Embarked from each place</b>
+
+```{r}
+g12<-ggplot(titanic,aes(x =Embarked)) +
+  theme_foundation() +
+  geom_bar(col="black",aes(fill=Embarked))+
+  labs(title = "Distribuion of Embarked")
+
+ggplotly(g12)
+```
+<br>
+
+
+<b><i>=> By seeing the graph of Embarked, We can conclude that most of the people boarded titanic from vSouthampton.</i></b>
+
+<br>
+
+Q10)<b> Checking Relationship between Age and Fare </b>
+
+```{r}
+sample_titanic1<- titanic[1:400,]
+
+g13<- ggplot(sample_titanic1,aes(x=Age,y=Fare)) +
+  theme_dark()+
+  geom_point() +
+  geom_smooth(method = lm)+
+  labs(title = "Distribution of Age and Fare")
+
+ggplotly(g13)
+
+# We can also see the corelation coeffcient to see the relation
+cor(sample_titanic1$Age,sample_titanic1$Fare)
+```
+<br>
+
+
+<b><i>We can see there is no a huge change b/w age and fare. 
+As the corelation coeffcient is .09 so there is no Relation between Fare and Age</i></b>
+
+<br>
+
+Q11)<b>Distribution between Age and Survived </b>
+
+```{r}
+g14<- ggplot(titanic, aes(x = Age, fill = Survived)) +
+  theme_economist()+
+  geom_histogram(binwidth = 5,col="black") +
+  labs(y = "Passenger Count",
+       x = "Age (binwidth = 5)",
+       title = "Titanic Survival Rates by Age")
+
+ggplotly(g14)
+```
+<br>
+
+Q12)<b>Distribution of PClass and fare </b>
+
+```{r}
+fare_category <-cut(titanic$Fare,breaks = c(0,100,250,512),labels = c("Silver Price","Golden Price","Premium Price"))
+
+table(fare_category)
+
+titanic$fare_category<- fare_category
+
+titanic<- na.omit(titanic)
+
+g15<- ggplot(titanic) +
+  theme_base()+
+  geom_bar(aes(x=fare_category,fill=Pclass))+
+  labs(ylab="Fair Distribution",title="Fare Distribution Vs Pclass")
+
+ggplotly(g15)
+```
+<br>
+
+
+<b><i>1)=> By seeing the graph, We can see the Silver Tickets are brought more than others and PClass 3 are more.
+
+2)=> Other important result we see , as Silver Ticket price is between (0,100) still we see PClass 1 and PClass 2 tickets in this price which tells us their is Fare discrimination based on PClass Tickets as for such a small amount we are getting PClass 1 ticket at some Embarked.</i></b>
+
+<br>
+
+Q13)<b>Distribution of Sex and fare </b>
+
+```{r}
+g16<-ggplot(titanic) +
+  theme_economist_white()+
+  geom_bar(aes(x=fare_category,fill=Sex))+
+  labs(ylab="Fair Distribution", title = "Distribution of Fare by Sex")
+
+ggplotly(g16)
+
+```
+<br>
+
+
+<b><i>1)=> By seeing the graph, We can see Males have brought more Silver Tickets than Females.
+
+2)=> Females have brought more Golden Tickets than Males.
+
+3)=> Premium tickets are very less brought.   </i></b>
+
+<br>
+
+Q14)<b>Top 10 Aged People in Male</b>
+
+```{r}
+Top_10_Aged_Male<- titanic %>%
+  select(Name,Sex,Age) %>%
+  filter(Sex=="male") %>%
+  arrange(desc(Age)) %>%
+  select(Name,Age) %>%
+  top_n(10)
+
+Top_10_Aged_Male$Age<- round(Top_10_Aged_Male$Age)
+
+Top_10_Aged_Male
+```
+<br>
+
+<b><i>Details of Oldest Male on Titanic</i></b>
+```{r}
+sqldf("select * from titanic where Name='Barkworth, Mr. Algernon Henry Wilson'")
+```
+<br>
+
+
+<b><i>=> We can see from table that Mr Algernon Henry Wilson Barkworth is the oldest male on Ship and he survived.</i></b>
+
+<br>
+
+Q15)<b>Distribution of Aged Males</b>
+
+```{r}
+g17<-ggplot(data = Top_10_Aged_Male,aes(Age)) +
+  geom_histogram(fill=rainbow(4),col="black",binwidth = 5) +
+  theme_dark() +
+  labs(title = "Aged People Age Distribution")
+
+ggplotly(g17)
+```
+<br>
+
+Q16)<b>Top 10 Aged People in Females</b>
+
+```{r}
+Top_10_Aged_Female<- titanic %>%
+  select(Name,Sex,Age) %>%
+  filter(Sex=="female") %>%
+  arrange(desc(Age)) %>%
+  select(Name,Age) %>%
+  top_n(10)
+
+Top_10_Aged_Female$Age<- round(Top_10_Aged_Female$Age)
+
+Top_10_Aged_Female
+```
+<br>
+
+
+```{r}
+sqldf("select * from titanic where Name='Andrews, Miss. Kornelia Theodosia' ")
+```
+
+
+<b><i>=> We can see from table that Miss. Kornelia Theodosia, Andrews is the oldest female on Ship and she survived.</i></b>
+
+<br>
+
+Q17)<b>Relation between survived and fare wrt Pclass</b>
+```{r}
+g18<-ggplot(data = titanic,aes(Survived,log(Fare),fill=Pclass)) +
+  theme_excel() +
+  geom_violin() +
+  labs(y="Fare Distribution",title = "Distribution of Fare and Survival")
+
+ggplotly(g18)
+```
+<br>
+
+
+<b><i>#=> By seeing the graph of Fare and survival, We can conclude that as the PClass class is increase towards 1, Fare is more expensive and they have more chances of survival.</i></b>
+
+<br>
+
+Q18)<b>Relation between Pclass and Embarked wrt Survival</b>
+
+```{r}
+g19<-ggplot(data = titanic,aes(Pclass,fill=Survived)) +
+  theme_dark()+
+  facet_wrap(~Embarked) +
+  geom_bar(col="black") +
+  labs(title = "Distribution of PClass and Embarked wrt Survival")
+
+ggplotly(g19)
+```
+<br>
+
+
+<b><i> 1)=> By seeing the graph, We can conclude that for all Embarked people in PClass 1 survived more compared to other PClass and Embarked.
+
+2)=> We can also see most of people who died in titanic, boarded their ship from vSouthampton and are from PClass 3.</i></b>
+
+<br>
+
+Q19)<b>Relation between Sex and Embarked wrt Survived </b>
+
+```{r}
+g20<- ggplot(data = titanic,aes(Sex,fill=Survived)) +
+  theme_excel()+
+  facet_wrap(~Embarked) +
+  geom_histogram(stat="count",col="black") +
+  labs(title = "Distribution of Sex and Embarked wrt Survived ")
+
+ggplotly(g20)
+```
+<br>
+
+
+<b><i>=> By seeing the graph, We can conclude that Females survived from all 3 Embarked and males died more from vSouthampton and we can predict that most died Males may be belonged to Pclass 3 as its survival rate is less.</i></b>
+
+<br>
+
+Q20)<b>Relation between Sex and Embarked wrt Pclass </b>
+
+```{r}
+g21<-ggplot(data = titanic,aes(Sex,fill=Pclass)) +
+  theme_fivethirtyeight()+
+  facet_wrap(~Embarked) +
+  geom_bar(col="black") +
+  labs(title = "Distribution of Sex and Embarked wrt Pclass")
+
+ggplotly(g21)
+```
+<br>
+
+
+<b><i> 1)=> By seeing the graph, We can conclude that for Cherboung has almost same distribution of Pclass among both Sex categories.
+
+2)=> In Queenstown almost all people in both Sex categories boarded ther ticket in PClass 3.
+
+3)=> In vSouthampton males have slight edge for buying Pclass 1 ticket over females. And more males have buyed Pclass 3 ticket. Our prediction was right in the last question. </i></b>
+
+<br>
+
+Q21)<b>Relation between Age and Embarked wrt Pclass</b>
+
+```{r}
+g22<-ggplot(data = titanic,aes(Pclass,Age,fill=Pclass)) +
+  theme_dark()+
+  facet_wrap(~Embarked) +
+  geom_count() +
+  ylim(c(0,80))+
+  ylab("Age Distribution") +
+  labs(title = "Distribution of Age and Embarked wrt Pclass")
+
+ggplotly(g22)
+```
+<br>
+
+
+<b><i>1)=> By seeing the graph, We can see the different age range for buying different Pclass tickets. The thicker areas somewhere means people of same age are more who brought that Ticket.
+
+2)=> We can also see for vSouthampton, for Pclass 1 age category is fully covered from 1 to 80 i.e from a small child to an oldage all types of people are there.
+
+3)=> We can also see for vSouthampton, for Pclass 3 age category the area is very thicker between age 17 to 50 that concludes this range people have buyed more PClass 3 tickets. </i></b>
+
+<br>
+
+Q22)<b>Relation between PClass Age Sex Embarked</b>
+
+
+```{r}
+g23<-ggplot(data = titanic,aes(x=Age,fill=Pclass)) +
+  theme_get()+
+  facet_wrap(Sex~Embarked) +
+  geom_bar(stat="count") +
+  labs(title="Distribution of Age wrt PClass Sex Embarked")
+
+ggplotly(g23)
+```
+<br>
+
+
+<b><i>#=> By seeing the graph, We can conclude the same thing which we got from the last graph.</i></b>
+
+<br>
+
+Q23)<b>Relation between PClass Survived Sex Embarked</b>
+
+
+```{r}
+g24<-ggplot(data = titanic,aes(Pclass,fill=Sex)) +
+  theme_igray()+
+  facet_wrap(Survived~Embarked) +
+  geom_bar(col="black") +
+  scale_y_continuous(limits = c(0,80),breaks = seq(0,80,20)) +
+  labs(title = "Distribution of Pclass wrt Survived Sex Embarked ")
+
+ggplotly(g24)
+```
+<br>
+
+
+<b><i>=> By seeing the graph, We can see the similar conclution we got earlier that males died more than female of PClass 1 and PClass 2. And in Survival also female survived more than males in all PClass tickets.</i></b>
+
+<br>
+
+Q24)<b>Relation between Fare and Embarked</b>
+
+```{r}
+g25<-ggplot(data = titanic,aes(Fare,Embarked)) +
+  theme_bw() +
+  geom_jitter(stat = "identity",col="red") +
+  geom_smooth(method = lm) +
+  labs(title="Relation between Fare and Embarked")
+
+ggplotly(g25)
+```
+<br>
+
+
+<b><i>1)=> By seeing the plot, the line shows the fare range as per differnt Embarked.
+
+2)=> For Cherboung the variation of Fare is pretty high. Distribution of Fare are more between (0,100) so that must be Pclass 3 ticket. There are some more distribution above 100 upto 500 that shows Pclass 2 ticket will be aroung (100,250) and furture is Pclass 3
+
+3)#=> For Queenstown the distribution of Fare are mostly between (0,100).We can conclude people boarded from there are less and brought PClass 3 tickets more compared to other tickets**
+
+4)#=> For vSouthapton we see too much overplotting between (0,100) so that must be Pclass 3 ticket. There are some more distribution above 100 upto 260 approx.
+
+5)#=>It gives an important conclution that PClass ticket prices vary for differnt Embarked as we have seen Pclass 1 ticket for vSouthampton but max price is only 260 here. And there may be discrimination of Fare based on Gender. </i></b>
+
+<br>
+
+Q25)<b>Ratio of Survival of Sex</b>
+
+
+```{r}
+titanic2 <- read.csv("C:/Users/Hp/Desktop/titanic.csv",sep = ",",stringsAsFactors = TRUE,na.strings = NA,header = T)
+
+
+#removing the NULL values 
+titanic2<- na.omit(titanic2)
+dim(titanic2)
+
+#We can use sapply function to get the nÂº of missing values in our dataset
+sapply(titanic2,function(x) sum(is.na(x)))
+
+#converting to factors
+
+titanic2$Pclass <- as.factor(titanic2$Pclass)
+titanic2$Sex <- as.factor(titanic2$Sex)
+titanic2$Embarked <- as.factor(titanic2$Embarked)
+
+titanic2$Embarked<- ifelse(titanic2$Embarked=="C","Cherbourg",(ifelse(titanic2$Embarked=="Q","Queenstown","vSouthampton")))
+
+```
+<br>
+
+```{r}
+survival<- titanic2%>%
+  select(Sex,Survived)%>%
+  group_by(Sex)%>%
+  summarise(survival_rate = mean(Survived))
+
+survival
+```
+<br>
+
+<b><i>We can see that Survival ration of female to male is nearly 3:1</i></b>
+
+<br>
+
+<b> Finding Survival Rate of Females to Males </b>
+```{r}
+survival<- titanic2%>%
+  select(Sex,Survived)%>%
+  group_by(Sex)%>%
+  summarise(survival_rate = mean(Survived))
+
+survival
+```
+<i> We can see that Survival ration of female to male is nearly 3:1 </i>
+
+<br>
+Q26)<b>Distribution of Sex and Survival</b>
+
+```{r}
+g26<- ggplot(data = titanic,aes(Sex,fill=Survived)) +
+  theme_base() +
+  geom_bar(col="black") +
+  labs(title="Distribution of Sex and Survival")
+
+ggplotly(g26)
+```
+<br>
+
+
+<b><i> The graphs tells that survival rate of female is more than male</i></b>
+
+<br>
+Q27)<b>Distribution of Fare vs Survival</b>
+
+```{r}
+g27<-ggplot(data = titanic,aes(Fare,fill=Survived)) +
+  theme_economist() +
+  geom_histogram(bins = 30,col="black") +
+  scale_y_continuous(limits = c(0,120)) +
+  labs(title = "Distribution of Fare wrt to Survival")
+
+ggplotly(g27)
+```
+<br>
+
+<b><i>The graph tells that, as fare increases Survival increases</i></b>
+
+<br>
+Q28)<b>Distribution of survival specific to sex</b>
+
+```{r}
+g28<-ggplot(data = titanic,aes(Fare,fill=Survived)) +
+  theme_stata() +
+  facet_wrap(~Sex)+
+  geom_histogram(bins = 30,col="black") +
+  scale_y_continuous(limits = c(0,90),breaks =seq(0,90,30)) +
+  labs(x="Fare",y="Survival Count",title = "Distribution of survival specific to sex")
+
+ggplotly(g28)
+```
+<br>
+
+
+<b><i>As fare increases Survival increases in case of females but not males and expensive fare tickets are more likely brought by men.</i></b>
+
+<br>
+Q29)<b>Distribution of survival wrt SibSp </b>
+
+```{r}
+g29<-ggplot(data = titanic,aes(SibSp,fill=Survived)) +  
+  theme_solarized_2() +
+  geom_bar(col="black")+
+  scale_y_continuous(limits = c(0,500),breaks =seq(0,500,100)) +
+  labs(title = "Distribution of SibSp wrt Survived")
+
+ggplotly(g29)
+```
+<br>
+
+
+<b><i>The graph tells that, as the siblings increase the chances of survival decrease</i></b>
+
+<br>
+Q30)<b>Distribution of survival wrt Parch </b>
+
+```{r}
+g30<-ggplot(data = titanic,aes(Parch,fill=Survived)) +  
+  theme_solarized_2() +
+  geom_bar(col="black")+
+  scale_y_continuous(limits = c(0,200),breaks =seq(0,200,50)) +
+  labs(title = "Distribution of Parch wrt Survived")
+
+ggplotly(g30)
+```
+<br>
+
+
+<b><i>The graph tells that, as the family increase the chances of survival decrease</i></b>
+
+<br>
+Q31)<b>Relationship between family size and survivals</b>
+
+```{r}
+# Adding a calculated field column to dataset
+titanic = titanic%>%
+  mutate(family_size = SibSp + Parch)
+
+g31<-ggplot(data = titanic,aes(family_size,fill=Survived)) +
+  theme_base() + 
+  geom_bar(col="black")+
+  labs(title = "Distribution of Family Size wrt Survived",y="Survival Count") +
+  scale_y_continuous(limits = c(0,450),breaks = seq(0,450,100))
+
+ggplotly(g31)
+```
+<br>
+
+
+<b><i>The graph tells that, as family size increase survival rate decreases.</i></b>
+
+<br>
+Q32)<b>Distribution of cabin locations.</b>
+
+```{r}
+A = titanic%>%
+  select(Cabin) %>%
+  group_by(Cabin) %>%
+  summarise(total = n()) %>%
+  arrange(desc(total)) %>%
+  top_n(8)
+
+# Filling the missing column value with a variable
+#class(A)
+A=as.matrix(A)
+A[1,1] <- "X"
+A=as.data.frame(A)
+#class(A)
+
+A
+
+g32<-ggplot(data = A,aes(A$Cabin,A$total)) +
+  theme_dark() +
+  geom_histogram(stat = "identity",fill=rainbow(8),col="black") +
+  labs(title = "Distribution of Cabin")
+
+ggplotly(g32)
+
+```
+<br>
+
+
+<b><i>1)The graph tells that, most of Cabins has the space of 3 to 4 people living.
+
+2)The X cabin represents the missing names of Cabin. </i></b>
+
+<br>
+
+Q32)<b>Top 5 Highest Tickets Sell</b>
+
+```{r}
+top_5_highest_ticket_sell <- sqldf("select Ticket,count(Ticket) as total from titanic2 group by Ticket order by total desc limit 5")
+top_5_highest_ticket_sell
+
+```
+
+```{r}
+#Ploting Graph
+g33<-ggplot(data = top_5_highest_ticket_sell ,aes(Ticket,total)) +
+  theme_economist_white() +
+  geom_bar(stat="identity",fill=rainbow(5) ,col="black") +
+  ylim(c(0,8)) +
+  labs(title = "Top 5 ticket Sold")
+
+ggplotly(g33)
+```
+<br>
+
+
+<b><i>The graph tells that, ticket number 347082 is the highest sold ticket.</i></b>
+
+<br>
+
+Q33)<b>Top 10 Initials Sir Names (Can help to predict survival)</b>
+
+```{r}
+titanic2<-separate(data = titanic2,col =Name,into= c("LastName", "Initial","FirstName","MiddleName"),sep = " ")
+
+top_10_Initial_Sir_Names<- titanic2%>%
+  select(Initial,Survived) %>%
+  group_by(Initial) %>%
+  summarise(total = n(),survived_total= sum(Survived)) %>%
+  arrange(desc(total)) %>%
+  top_n(5)
+
+top_10_Initial_Sir_Names
+```
+
+```{r}
+#Ploting the Graph
+g34<-ggplot(data = top_10_Initial_Sir_Names,aes(Initial,total,fill=Initial)) +
+  theme_foundation() +
+  geom_count()+
+  labs(title = "Distribution of Sir Names")
+
+ggplotly(g34)
+```
+<br>
+
+
+<b><i>=>1)The graph tells that, Sirname 'Mr' are more compared to others.
+    
+2)Sirname 'Dr' there were very less Doctors that that taveled.
+    
+3)Sirname with 'Miss' is the 2nd most travelled people that shows there were many unmarried people also. </i></b>
+
+<br>
+
+Q33)<b>Total Vs Survival Count</b>
+
+```{r}
+barplot(top_10_Initial_Sir_Names$total,ylim = c(0,450),col=rainbow(5),legend = top_10_Initial_Sir_Names$Initial)
+lines(top_10_Initial_Sir_Names$total,type="o",col="blue") +
+lines(top_10_Initial_Sir_Names$survived_total,type="o",col="white") +
+title("Total Vs Survival Count")
+```
+<br>
+
+
+<b><i>The bar and line plot shows the total Sir name count wrt their survival count.</i></b>
+
+<br>
+
+Q35) We can find the Relations
+```{r}
+##relation between Survival PClass 
+titanic2$Pclass<-as.numeric(titanic2$Pclass)
+cor(titanic2$Survived,titanic2$Pclass)
+
+```
+<br>
+
+
+<b><i>The correlation between Survival and Pclass is moderate negative. That shows as PClass increases From 1 to 2 to 3 , Survival rate decreases.</i></b>
+
+<br>
+```{r}
+##relation between Survival Fare 
+cor(titanic2$Survived,titanic2$Fare)
+
+```
+<br>
+
+
+<b><i>The correlation between Survival and Pclass is moderate positive. That shows as Fare increases, Survival rate also increases.</i></b>
+
+<br>
+
+Q36<b>Number of 'Child','Adult','Elder' on the ship</b>
+
+```{r}
+# Creating a range distribuion of Age
+age_categories <- cut(titanic$Age,breaks = c(0,20,50,80),labels = c("Children","Adults","OldAged"))
+
+table(age_categories)
+
+titanic$age_category<- age_categories
+
+
+titanic<- na.omit(titanic)
+
+nrow(titanic)
+
+sapply(titanic,function(x) sum(is.na(x)))
+```
+
+<br>
+```{r}
+g37<-ggplot(titanic,aes(age_category)) +
+  theme_pander() +
+  geom_bar(aes(fill=age_category),col="black") +
+  scale_y_continuous(limits = c(0,500),breaks = seq(0,500,100)) +
+  labs(title = "Distribution of Age Category")
+
+ggplotly(g37)
+```
+<br>
+
+
+<b><i>=> By seeing the graph of Age category, We can conclude that most of the people are from Adult Category.</i></b>
+
+<br>
+
+Q37<b>Age Categories based on the Embarked wrt to Sex</b>
+
+```{r}
+#Using DPLYR
+age_cateory_by_Embarked_Sex<- titanic%>%
+  select(age_category,Embarked,Sex) %>%
+  group_by(age_category,Embarked,Sex)%>%
+  summarise(total = n())
+age_cateory_by_Embarked_Sex
+
+```
+
+```{r}
+#Using GGPLOT2
+g38<- ggplot(titanic,aes(age_category,fill=Sex)) +
+  theme_dark() +
+  facet_wrap(~Embarked) +
+  geom_histogram(stat="count",col="black") +
+  labs(title = "Age Categories based on the Embarked wrt to Sex")
+
+ggplotly(g38)
+```
+<br>
+
+
+<b><i>=> By seeing the graph, We can conclude that most of the most of male People and specially adults boarded titanic from vSouthampton.</i></b>
+
+<br>
+
+Q38<b>Age Categories based on the Embarked wrt to Pclass</b>
+
+```{r}
+#Using DPLYR
+age_cateory_by_Embarked_Pclass<- titanic%>%
+  select(age_category,Embarked,Pclass) %>%
+  group_by(age_category,Embarked,Pclass)%>%
+  summarise(total = n())
+age_cateory_by_Embarked_Pclass
+```
+
+```{r}
+#Using GGPLOT2
+g39<-ggplot(titanic,aes(Pclass)) +
+  theme_dark() +
+  facet_wrap(~Embarked) +
+  geom_histogram(stat="count",aes(fill=age_category),col="black") +
+  labs(title = "Age Categories based on the Embarked wrt to Pclass")
+
+ggplotly(g39)
+```
+<br>
+
+
+<b><i>1)=> By seeing the graph, We can see that mostly Adults traveled the titanic having any of the PClass ticket.
+
+2)=> Most of the childrens boarded titanic from vSouthampton and with PClass 3.
+3)=> OldAge people are less and have traveled from all the Embarked and mostly from vSouthampton. </i></b>
+
+<br>
+
+Q38<b>Age Categories based on the Embarked wrt to Sex and Pclass</b>
+
+```{r}
+#Using DPLYR
+
+age_cateory_by_Embarked_Sex_Pclass<- titanic%>%
+  select(age_category,Sex,Embarked,Pclass) %>%
+  group_by(age_category,Sex,Embarked,Pclass)%>%
+  summarise(total = n())
+age_cateory_by_Embarked_Sex_Pclass
+```
+
+```{r}
+#Using GGPLOT
+g40<-ggplot(titanic,aes(Pclass,fill=age_category)) +
+  theme_dark() +
+  facet_wrap(Sex~Embarked) +
+  geom_bar(col="black") +
+  labs(title = "Age Categories based on the Embarked wrt to Sex and Pclass")
+
+ggplotly(g40)
+```
+<br>
+
+
+<b><i>1)=> By seeing the graph, We can see that in Cherboung and Queenstown the distribution of Age cateogory among males and females are almost wrt to PClass.
+
+2)=> In vSouthampton Adult Males boarded more than Adult Females wrt to all PClass. And this is same for other age cateogories also as males of all category are more than females. </i></b>
+
+<br>
+
+Q39<b>Age Categories based on the Embarked wrt to Survived</b>
+
+```{r}
+#Using DPLYR
+age_cateory_by_Embarked_Survived<- titanic%>%
+  select(age_category,Embarked,Survived) %>%
+  group_by(age_category,Embarked,Survived)%>%
+  summarise(total = n())
+age_cateory_by_Embarked_Survived
+
+```
+
+```{r}
+#Using GGPLOT
+g41<-ggplot(titanic,aes(Survived,fill=age_category)) +
+  theme_dark() +
+  facet_wrap(~Embarked) +
+  geom_histogram(stat="count",col="black") +
+  labs(title = "Age Categories based on the Embarked wrt to Survived")
+
+ggplotly(g41)
+```
+<br>
+
+
+<b><i>1)=> By seeing the graph, We can see that in all Embarked Adults are survived most and next are childrens.
+
+2)=> The result is same in case of death as Adults have died more and the next is Children.</i></b>
+
+<br>
+
+Q40)<b> Age Categories based on the Embarked wrt to Sex Survived and Pclass </b>
+
+```{r}
+#Using DPLYR
+age_cateory_by_Embarked_Sex_Survived_Pclass<- titanic%>%
+  select(age_category,Embarked,Sex,Pclass,Survived) %>%
+  group_by(age_category,Embarked,Sex,Pclass,Survived)%>%
+  summarise(total = n())
+head(age_cateory_by_Embarked_Sex_Survived_Pclass)
+```
+
+```{r}
+#Using GGPLOT
+g42<-ggplot(titanic,aes(Pclass,fill=age_category)) +
+  theme_dark() +
+  facet_wrap(Sex~Embarked) +
+  geom_bar(stat="count",col="black") +
+  labs(title = "Age Categories based on the Pclass wrt Embarked,Sex")
+
+ggplotly(g42)
+```
+<br>
+
+<b><i>=> By seeing the graph, We get similar results which we got before.</i></b>
+
+<br>
+
+Q41)<b>Age Categories based on the Pclass wrt Embarked,Survived </b>
+
+```{r}
+#Using DPLYR
+age_cateory_by_Embarked_Survived_Pclass<- titanic%>%
+  select(age_category,Embarked,Pclass,Survived) %>%
+  group_by(age_category,Embarked,Pclass,Survived)%>%
+  summarise(total = n())
+head(age_cateory_by_Embarked_Survived_Pclass)
+```
+
+```{r}
+#Using GGPLOT
+g43<-ggplot(titanic,aes(Pclass,fill=age_category)) +
+  theme_dark() +
+  facet_wrap(Survived~Embarked) +
+  geom_bar(stat="count",col="black") +
+  labs(title = "Age Categories based on the Pclass wrt Embarked,Survived")
+
+ggplotly(g43)
+```
+<br>
+
+<b><i>=> By seeing the graph, We can see the similar results as before.</i></b>
+
+<br>
+
+Q42)<b>Age Categories based on the Embarked wrt to Fare </b>
+
+```{r}
+g44<-ggplot(titanic,aes(age_category,Fare)) +
+  theme_stata() +
+  facet_wrap(~Embarked) +
+  geom_violin(color="green",fill="blue")+
+  labs(title = "Age Categories based on the Embarked wrt to Fare")
+
+ggplotly(g44)
+```
+<br>
+
+
+<b><i>1)=> By seeing the graph, We can see that fares ranges with huge margin for age category wrt differnt Embarked.
+
+2)=> We can conclude that there is discrimination of fares among different Embarked for diffrent age categories specially Adults. </i></b>
+
+<br>
+
+Q43) <b> Age Categories based on the Embarked wrt to Fare and Pclass</b>
+
+```{r}
+g45<-ggplot(titanic,aes(age_category,Fare,fill=Pclass)) +
+  theme_economist() +
+  facet_wrap(~Embarked) +
+  geom_violin() +
+  labs(title = "Age Categories based on the Embarked wrt to Fare and Pclass")
+  
+ggplotly(g45)
+```
+<br>
+
+
+<b><i>=> By seeing the graph, We can see that fares ranges age category wrt PClass and differnt Embarked.
+
+=>PClass 3 rates are somewhat similar there is not a huge discrimination of fare in this. Other PClass have some discrimiantion wrt Embarked and Age Category.</i></b>
+
+<br>
+
+Q44) <b>Age Categories based on the Survived wrt to Fare and Pclass</b>
+
+```{r}
+g46<-ggplot(titanic,aes(age_category,Fare,fill=Pclass)) +
+  theme_economist() +
+  facet_wrap(~Survived) +
+  geom_violin(col="brown") +
+  scale_y_continuous(limit=c(0,300))+
+  labs(title = "Age Categories based on the Survived wrt to Fare and Pclass")
+  
+ggplotly(g46)
+```
+<br>
+
+
+<b><i>=> By seeing the graph, We can see in Survival we see our previous result that with high PClass i.e 1 the probability of survial increasesa as they pay more compared to others. And it decreases as the PClass goes down as they pay less.</i></b>
+
+<br>
+
