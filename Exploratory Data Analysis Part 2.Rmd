@@ -1,0 +1,1284 @@
+---
+title: "Titanic DataSet Analysis Exploratory Analysis Part 2"
+output:
+  html_document:
+    always_allow_html: yes
+    df_print: paged
+  pdf_document: default
+  word_document: default
+---
+. Titanic dataset contains 891 rows and 12 columns.\n
+
+. DataSet is downloaded from kaggle \n
+
+. Notebook contains the indepth analysis of dataset including Probability,      Descriptive and Inferential Statistics.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)  
+```
+
+<b>Importing Libraries</b>
+```{r}
+library(dplyr)
+library(ggplot2)
+library(plotly)
+library(ggthemes)
+library(tidyr)
+library(sqldf)
+
+```
+
+<b>Loading and viewing the structure of data</b>
+```{r}
+titanic <- read.csv("C:/Users/Hp/Desktop/titanic.csv",sep = ",",stringsAsFactors = TRUE,na.strings = NA,header = T)
+
+str(titanic)
+dim(titanic)
+summary(titanic)
+```
+
+<b>Cleaning and changing the schema of data</b>
+```{r}
+
+# Removing the NULL values 
+titanic<- na.omit(titanic)
+dim(titanic)
+
+#We can use sapply function to get the nÂº of missing values in our dataset
+sapply(titanic,function(x) sum(is.na(x)))
+
+# Converting to Factors
+
+titanic$Pclass <- as.factor(titanic$Pclass)
+titanic$Survived <- as.factor(titanic$Survived)
+titanic$Sex <- as.factor(titanic$Sex)
+titanic$Embarked <- as.factor(titanic$Embarked)
+
+titanic$Survived<-ifelse(titanic$Survived==0,"Not Survivied","Survived")
+
+titanic$Embarked<- ifelse(titanic$Embarked=="C","Cherbourg",(ifelse(titanic$Embarked=="Q","Queenstown","vSouthampton")))
+
+```
+<br>
+
+<b> Adding a calulated Field</b>
+
+```{r}
+# Adding a calculated field column to dataset
+titanic = titanic%>%
+  mutate(family_size = SibSp + Parch)
+```
+
+
+
+```{r}
+#Adding a Age category variable to dataset
+
+age_categories <- cut(titanic$Age,breaks = c(0,20,50,80),labels = c("Children","Adults","OldAged"))
+
+table(age_categories)
+
+titanic$age_category<- age_categories
+
+
+titanic<- na.omit(titanic)
+```
+
+<br>
+<b>############    Using Probability it DataSet to find Insights   ############</b>
+
+
+```{r}
+# Probability of Survival 
+ab<-table(titanic$Sex,titanic$Survived)
+ab
+
+#P(Survival) <- P(Survival|Female)*P(Female) + P(Survival|Male)*P(Male)
+Prob_Survival<- 197/261 * 261/714 + 93/453 * 453/714
+Prob_Survival
+
+###-> 0.40 i.e 40% chances of Survival 
+
+
+# Prob of Pclass 1 2 3
+b<-table(titanic$Sex,titanic$Pclass)
+
+#P(Pclass1)<- P(1|Female)*P(Female) + P(1|Male)*P(Male)
+Prob_Pclass1 <- 85/261 * 261/714 + 101/453 * 453/714
+Prob_Pclass1
+
+###-> 0.26% i.e 26% People are from Pclass 1
+
+
+#P(Pclass2)<- P(2|Female)*P(Female) + P(2|Male)*P(Male)
+Prob_Pclass2 <- 74/261 * 261/714 + 99/453 * 453/714
+Prob_Pclass2
+
+###-> 0.24% i.e 24% People are from Pclass 2
+
+
+#P(Pclass3)<- P(3|Female)*P(Female) + P(3|Male)*P(Male)
+Prob_Pclass3<- 102/261 * 261/714 + 253/453 * 453/714
+Prob_Pclass3
+
+###-> 0.50% i.e 50% People are from Pclass 3 
+
+
+#Prob of total is 1 
+Prob_Pclass1 + Prob_Pclass2 + Prob_Pclass3
+
+
+# Prob of children, adult and oldage
+table(titanic$Sex,titanic$age_category)
+
+#P(Children)<- P(children|Female)*P(Female) + P(Children|Male)*P(Male)
+Prob_Children<- 77/261 * 261/714 + 102/453 * 453/714
+Prob_Children
+
+###-> .25 i.e 25% of Children are there
+
+
+#P(Adults)<- P(Adults|Female)*P(Female) + P(Adults|Male)*P(Male)
+Prob_Adults<- 167/261 * 261/714 + 304/453 * 453/714
+Prob_Adults
+
+###-> -.66 i.e 66% of Adults are there
+
+
+#P(OldAge)<- P(Oldaged|Female)*P(Female) + P(Oldaged|Male)*P(Male)
+Prob_OldAge<- 17/261 * 261/714 + 47/453 * 453/714
+Prob_OldAge
+
+###-> -.09 i.e 9% of OldAge are there
+
+
+# Prob of family size 0,1,2,3,4,5
+#table(titanic$Sex,titanic$family_size)
+
+#P(FamilySize_0)<- P(0|Female)*P(Female) + P(0|Male)*P(Male)
+Prob_FamilySize_0<- 100/261 * 261/714 + 304/453 * 453/714
+Prob_FamilySize_0
+
+###-> .56 i.e 56% of people were traveled alone
+
+
+#P(FamilySize_1)<- P(1|Female)*P(Female) + P(1|Male)*P(Male)
+Prob_FamilySize_1<- 72/261 * 261/714 + 67/453 * 453/714
+Prob_FamilySize_1
+
+###-> .19 i.e 19% of people travel with 1 person
+
+
+#P(FamilySize_2)<- P(2|Female)*P(Female) + P(2|Male)*P(Male)
+Prob_FamilySize_2<- 44/261 * 261/714 + 49/453 * 453/714
+Prob_FamilySize_2
+
+###-> .13 i.e 13% of people travel with 2 persons
+
+
+#P(FamilySize_3)<- P(3|Female)*P(Female) + P(3|Male)*P(Male)
+Prob_FamilySize_3<- 18/261 * 261/714 + 9/453 * 453/714
+Prob_FamilySize_3
+
+###-> .03 i.e 3% of people travel with 3 person.
+
+
+# Prob of People from Cher,Queeen,vSouth
+table(titanic$Sex,titanic$Embarked)
+
+#P(Cherbourg)<- P(Cherbourg|Female)*P(Female) + P(Cherbourg|Male)*P(Male)
+Prob_Cherbourg<- 61/261 * 261/714 + 69/453 * 453/714
+Prob_Cherbourg
+
+###->.18 i.e 18% of people boarded ship from Cherbourg
+
+
+#P(Queenstown)<- P(Queenstown|Female)*P(Female) + P(Queenstown|Male)*P(Male)
+Prob_Queenstown<- 12/261 * 261/714 + 16/453 * 453/714
+Prob_Queenstown
+
+###-> .04 i.e 4% of people boarded ship from Queenstown
+
+
+#P(vSouthampton)<- P(vSouthampton|Female)*P(Female) + P(vSouthampton|Male)*P(Male)
+Prob_vSouthampton<- 188/261 * 261/714 + 367/453 * 453/714
+Prob_vSouthampton
+
+###-> .78 i.e 78% of people boarded ship from vSouthampton
+```
+
+<br>
+
+<b>############   Using Descriptive Statistics it DataSet to find Insights   ############</b>
+
+<br>
+
+<b><i>Comparing mean median mode of 2 numeric variables</i></b>
+```{r}
+twoVar<-titanic[c("Age","Fare")]
+
+getmode <- function(v) {
+  uniqv <- unique(v)
+  uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+
+
+
+#Calculating Central Tendency of Age
+
+mean(twoVar$Age)    
+median(twoVar$Age)     
+getmode(twoVar$Age)
+
+mean(twoVar$Fare)    
+median(twoVar$Fare)    
+getmode(twoVar$Fare)
+```
+<br>
+
+
+<b><i>We can see in both the variable mean is greater than median that means Skweness is towords Right.</i></b>
+
+
+<b>Calculating Skewness (Mean>Median Right Skewed +ve), (Mean=Median=Mode Zero Skew,Symmetrical),(Mean<Median Left Skew -ve)</b>
+
+<br>
+<b>Cal mean and variance of fare</b>
+
+```{r}
+summary(twoVar$Age)
+
+boxplot(twoVar$Age,col=twoVar$Age)
+
+var(twoVar$Age)
+
+#-> We can see the variance is too large to compare the dispersion of age, we have to use standard deviation
+
+#Cal standard deviation and coff of variation (sd/mean) of age
+sd(twoVar$Age)
+
+#To Compare 2 variable we need coff of variance
+
+coffOfVariation_age<- sd(twoVar$Age)/mean(twoVar$Age)
+coffOfVariation_age
+
+```
+<br>
+
+<b><i>1) We can see the coff of variation is .49
+
+2) We can see the coff of variation is moderate so there is normal variation of age.
+
+3)The higher the coefficient of variation, the greater the level of dispersion around the mean, as u can see from the boxplot. </i></b>
+
+
+<br>
+<b>Calculate variance of Fare</b>
+
+```{r}
+summary(twoVar$Fare)
+
+boxplot(twoVar$Fare,col=twoVar$Fare)
+
+var(twoVar$Fare)
+
+#-> We can see the variance is too large to compare the dispersion of age, we have to use standard deviation
+
+#Cal standard deviation and coff of variation (sd/mean) of age
+sd(twoVar$Fare)
+
+```
+
+<b>To Compare 2 variable we need coff of variance</b>
+
+```{r}
+coffOfVariation_Fare<- sd(twoVar$Fare)/mean(twoVar$Fare)
+coffOfVariation_Fare
+```
+
+<br>
+<b><i>1) We can see the coff of variation is preety high so there is very high variation of fare.
+
+2)I states that there may be possiblility of discrimination of fare.
+
+3)The higher the coefficient of variation, the greater the level of dispersion around the mean, as u can see from the boxplot. </i></b>
+
+
+<br>
+<b>calculate covariance and correlation coefficient between age and fare</b>
+
+```{r}
+cov(twoVar$Age,twoVar$Fare)
+
+#cal corelation coeff (corelation adjust covariance, so that relationship b/w 2 variables become easy to understand)
+
+#(corelation coeff = cov(x,y)/sd(x).sd(y), -1 to 1 range)
+
+sdMul<-sd(twoVar$Age)*sd(twoVar$Fare)
+
+corelation_coeff_Age_Fare <-cov(twoVar$Age,twoVar$Fare)/sdMul
+corelation_coeff_Age_Fare
+
+```
+
+
+<b><i> corr coff is .10 .We can conclude that there is pretty low correlation between age and fare.</i></b>
+
+
+<br>
+<b>Calculate covariance and correlation coefficient between fare and familysize</b>
+
+```{r}
+AgeFamilySize<-titanic[c("Fare","family_size")]
+
+cov(AgeFamilySize$Fare,AgeFamilySize$family_size)
+
+# cal corelation coeff (corelation adjust covariance, so that relationship b/w 2 variables become easy to understand)
+
+#(corelation coeff = cov(x,y)/sd(x).sd(y), -1 to 1 range)
+
+corelation_coeff_Fare_FamilySize<- cov(AgeFamilySize$Fare,AgeFamilySize$family_size)/sd(AgeFamilySize$Fare)*sd(AgeFamilySize$family_size)
+
+corelation_coeff_Fare_FamilySize
+
+```
+<br>
+
+
+<b><i>As the corelation_coeff is .45 i.e moderate +ve corelation. We can conclude that if Family Size increases the Fare increases.</i></b>
+
+
+<br>
+<b>Compare  fare distribution of 3 embarked </b>
+
+```{r}
+table(titanic$Embarked)
+
+fare_prices1 <- sqldf("select fare from titanic where Embarked=='Cherbourg' limit 28")
+fare_prices2 <- sqldf("select fare from titanic where Embarked=='Queenstown'")
+fare_prices3 <- sqldf("select fare from titanic where Embarked=='vSouthampton' limit 28")
+
+Fare_Distibution_of_Embarked<-cbind(fare_prices1,fare_prices2,fare_prices3)
+
+colnames(Fare_Distibution_of_Embarked)<-c("Cherbourg","Queenstown","vSouthampton")
+
+```
+
+<b>Step1) Finding Mean Median and Mode of all 3 Embarked and comparing </b>
+
+```{r}
+getmode <- function(v) {
+  uniqv <- unique(v)
+  uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+
+ ##Cherbourg
+mean(Fare_Distibution_of_Embarked$Cherbourg)  
+median(Fare_Distibution_of_Embarked$Cherbourg)
+getmode(Fare_Distibution_of_Embarked$Cherbourg)
+ 
+ ##Queenstown
+mean(Fare_Distibution_of_Embarked$Queenstown)
+median(Fare_Distibution_of_Embarked$Queenstown)
+getmode(Fare_Distibution_of_Embarked$Queenstown)
+
+ ##vSouthampton
+mean(Fare_Distibution_of_Embarked$vSouthampton)
+median(Fare_Distibution_of_Embarked$vSouthampton)
+getmode(Fare_Distibution_of_Embarked$vSouthampton)
+
+```
+<br>
+
+<b>Step2) Finding Skewness
+       ##-> All 3 are right skewed as Mean> Median  </b>
+
+```{r}
+
+g52<- ggplot(Fare_Distibution_of_Embarked) +
+  theme_economist()+
+  geom_density(aes(Cherbourg),col=c("brown"))+
+  geom_vline(xintercept =mean(Fare_Distibution_of_Embarked$Cherbourg),col="green") +
+  geom_vline(xintercept = median(Fare_Distibution_of_Embarked$Cherbourg),col="red")+
+  geom_vline(xintercept = getmode(Fare_Distibution_of_Embarked$Cherbourg),col="blue") +
+  labs(title = "Skeness of Mean(green), Median(red), Mode(blue)")
+
+ggplotly(g52)
+
+```
+<br>
+
+<b>Step3) Comparing variance, Sd and coff of variation of 3 </b>
+
+```{r}
+var(Fare_Distibution_of_Embarked$Cherbourg)
+var(Fare_Distibution_of_Embarked$Queenstown)
+var(Fare_Distibution_of_Embarked$vSouthampton)
+
+```
+
+<b>-> Since var is has a square unit we cant compare so we calculate sd.</b>
+
+```{r}
+sd(Fare_Distibution_of_Embarked$Cherbourg)
+sd(Fare_Distibution_of_Embarked$Queenstown)
+sd(Fare_Distibution_of_Embarked$vSouthampton)
+```
+
+<b>-> We need to cal coff of variation of comparision b/w the Embarked.</b>
+
+```{r}
+coff_Cher <- sd(Fare_Distibution_of_Embarked$Cherbourg)/mean(Fare_Distibution_of_Embarked$Cherbourg)
+coff_Cher
+
+coff_Queen <- sd(Fare_Distibution_of_Embarked$Queenstown)/mean(Fare_Distibution_of_Embarked$Queenstown)
+coff_Queen
+
+coff_vSouth <- sd(Fare_Distibution_of_Embarked$vSouthampton)/mean(Fare_Distibution_of_Embarked$vSouthampton)
+coff_vSouth 
+```
+<br>
+
+<b><i> We can see that all 3 have coff of variation >1 i.e they are highly correlated.So we can conclude their fare variablity is highly distributed around the mean specially vSouthampton. </i></b>
+
+
+<br>
+<b>############   Using Inferential Statistics it DataSet to find Insights   ############</b>
+
+<br>
+<b>Calculating Confidence Interval of Ages for 95% confidence</b>
+
+```{r}
+#taking sample of 121 
+ages<- titanic["Age"]
+
+ages2<- ages[200:321,]
+
+### As the population variance is unknown we will use Student's T distribution
+
+### We are using 95% confidence level
+
+#Step1) Calculating mean, sd and SE
+mean(ages2)
+sd(ages2)
+SE <- sd(ages2)/sqrt(121)
+SE
+
+#Step2) Finding T statistic 
+# Degree of Freedom = n-1 = 121-1 = 120 and for 95% confidence i.e alpha is 5% so alpha/2 is .25
+qt(.95,120)
+t_statisic <- 1.65   #from T statistic table
+
+#using the formula to find confidence interval 
+
+#### [mean(ages2) - 1.65*SE , mean(ages2) + 1.65*SE]
+
+29.68852 - 1.65*1.237137
+
+29.68852 + 1.65*1.237137
+
+#### [27.64,31.72]
+
+#### We are 95% confident that the mean of Ages of polulation will be between [27.64,31.72]
+
+```
+<br>
+
+<b>Calculating Confidence Interval of Fare for 95%, 99% confidence</b>
+
+```{r}
+#taking sample of 121
+fares<- titanic$Fare
+fares<- fares[400:521]
+
+#Step1) Calculating mean, sd and SE
+mean(fares)
+sd(fares)
+SE <- sd(fares)/sqrt(121)
+SE
+
+#Step2) Finding T statistic 
+# Degree if Freedom = n-1 = 121-1 = 120 and for 95% confidence i.e alpha is 5% so alpha/2 is .25
+
+qt(.95,120)  # T statistic for 95% confidence
+qt(.99,120)  # T statistic for 99% confidence
+
+t_statisic <- 1.65 
+
+t_statisic2 <- 2.35 
+
+#using the formula to find confidence interval 
+
+# For 95% condidence
+#### [mean(fares) - t_statisic*SE , mean(fares) + t_statisic*SE]
+32.07995 - 1.65*2.726885
+32.07995 + 1.65*2.726885
+
+#### [27.58,36.58]
+
+```
+
+<b><i> We are 95% confident that the mean of Fare of polulation will be between [27.58,36.58] </i></b>
+
+```{r}
+# For 99% condidence
+#### [mean(fares) - t_statisic2*SE , mean(fares) + t_statisic*SE]
+32.07995 - 2.35*2.726885
+32.07995 + 2.35*2.726885
+
+#### [25.67,38.49]
+```
+
+<b><i>We are 99% confident that the mean of Fare of polulation will be between [25.67,38.49] </i></b>
+
+<br>
+
+<b>Calculating Confidence Interval of Fare wrt Queenstown and vSouthampton for Pclass 3 </b>
+
+```{r}
+#### Independent Samples but variance assumed to be equal 
+
+fare_prices4 <- sqldf("select fare from titanic where Embarked=='Queenstown' and Pclass=3")
+fare_prices5 <- sqldf("select fare from titanic where Embarked=='vSouthampton' and Pclass=3 limit 24")
+
+Fare_Compare<-cbind(fare_prices4,fare_prices5)
+colnames(Fare_Compare)<-c("Queenstown","vSouthampton")
+
+```
+
+```{r}
+#1)Cal mean and sd
+mean(Fare_Compare$Queenstown)      
+mean(Fare_Compare$vSouthampton)
+
+sd(Fare_Compare$Queenstown)
+sd(Fare_Compare$vSouthampton)
+
+nrow(Fare_Compare)
+
+#Step2) Calculate unbiased estimator i.e pooled sample variance
+pooled_variance <- 23*8.84^2 + 23*12.75^2 /46
+polled_variance<-120.354
+polled_sd<- sqrt(120.354)
+polled_sd
+
+# Step3) Calculating Student's T statistic
+
+#Degree of freedom is 24 +24 -2 =46 and confidence level is 95%
+qt(.95,46)
+
+t_statisic_fare <- 1.67
+
+#appling formula
+(18.20972 - 12.7809) - 1.67*sqrt(120.354/24 + 120.354/24)
+
+(18.20972 - 12.7809) + 1.67*sqrt(120.354/24 + 120.354/24)
+
+#### [0.14,10.72]
+
+```
+<br>
+
+<b><i> We are 95% confident that we can say that the one Embared has greater Fare for Pclass 3 than another by a margin of interval between [0.14,10.72] </i></b>
+
+
+<br>
+<b>Standardizing the Normal Distribution for age</b>
+
+<i>As the sample size increases the distribution becomes standard normal distribution.
+
+We will take small Sample and Standardize it </i>
+
+```{r}
+#taking sample of 121 
+ages<- titanic["Age"]
+ages2<- ages[200:321,]
+
+head(ages2)
+
+ages2 <- as.data.frame(ages2)
+colnames(ages2)<-c("Age")
+```
+
+```{r}
+hist(ages2$Age,col=rainbow(7),main="Histogram of Age Distribution")
+
+mean(ages2$Age)   
+sd(ages2$Age) 
+```
+
+```{r}
+#-> Finding Standard Error  sd/sqrt(n)
+standard_error <- sd(ages2$Age)/sqrt(nrow(ages2))
+standard_error
+
+```
+<br>
+
+<b><i>1) We can see the Standard Error 1.23
+
+2) As the sample size increases Standard Error decreases.
+
+3)mean 29.68 and sd =13.6 so i.e Right Skewed</i></b>
+
+
+-> We have to standardize the distribution
+
+```{r}
+#-> We have to find Z score i.e x-mean /sd 
+
+#1)Step x- mean
+sub_mean<-ages$Age - mean(ages$Age)
+
+mean(sub_mean)
+sd(sub_mean)
+hist(sub_mean,col=rainbow(7))
+
+```
+
+<b><i>We can see that the mean is almost 0 and sd is same as before 14.52 and graph has shifted to 0.</i></b>
+
+```{r}
+#Step 2) 
+#-> Dividing the sub_mean by standard devaiation (sd)
+z_score <- sub_mean/sd(sub_mean)
+
+mean(z_score)
+
+sd(z_score)
+
+```
+
+<b><i> We can see that the mean is approximately 0 sd=1 i.e standard normal distribution </i></b>
+
+```{r}
+z_df <- as.data.frame(z_score)  
+
+ggplot(z_df) +
+  geom_density(aes(z_df$z_score))
+
+#-> Finding Standard Error  sd/sqrt(n)
+standard_error2 <- sd(z_df$z_score)/sqrt(nrow(z_df))
+standard_error2
+
+```
+
+<b><i>1)We can see the Standard Error as 0.037. After performing Standard normal distribution which is good.</i></b>
+
+After performing Standard normal distribution we have reduced Standard Error from 1.23 we have reduced to 0.037 which is good. </i></b>
+
+
+<br>
+<b> ############   Hypothesis Testing   ############  </b>
+<br>
+
+<b>Find if the mean of Age is less than 30 or not.</b>
+```{r}
+#Test at 5% significance. Calculate the p-value of the test
+
+#Taking sample of 121 ages
+ages<- titanic["Age"]
+ages2<- ages[200:321,]
+
+# Step1) Writing null and alternative hypothesis 
+
+# H0:mean of age is<=30
+# H1:mean of age is>30
+
+
+# Its a one-sided tail test
+
+# Step2) Cal the mean,sd and SE
+mean(ages2)
+sd(ages2)
+SE <- sd(ages2)/sqrt(121)
+SE
+
+# Step3) Finding T Score
+# T= x- hyphosis_mean(x) / SE
+
+# T = 29.688652 - 30 / SE
+
+# T= -0.25   [we will take 0.25 as its easier to work with +ve and compare absolute values]
+
+# Finding Critical T value and comapring
+# as degree of freedom is 120 and we are caluclation at alpha=0.05 (95%)
+qt(.95,120)
+# t = 1.658
+
+#0.25 < 1.658 i.e  T< t
+
+#### As per decision rule if absoulte value of T score < critical T, we Accept Null Hyphothesis
+
+#### So,We accept the null Hyphothesis test
+
+#### So, at this level of significance we can 't say if the mean is >30
+
+# T test for 95% confidence interval
+t.test(ages2,mu=30,alternative = "greater",conf.level = 0.95)
+
+# Step4) Finding P value
+pt(0.25,120,lower.tail = FALSE)
+
+```
+<br>
+
+
+<b><i>The p-value is .401507. 
+
+1) 0.40 > 0.05 i.e P > alpha so as per decision rule we accept the null hyphothsis.
+
+2) So at 5% significance level we can't say that the mean is >30
+
+3) The result is Not Significant
+
+
+-> If we test at 1% significat level
+
+1) 0.40 > 0.01 i.e P > alpha therefore, we cannot reject the null hypothesis.
+
+2) So at 1% significance level we can't say that the mean is >30.
+
+3) The result is Not Significant.  
+</i></b>
+
+
+<br>
+<b>Find if the average Fare is less than 30</b>
+
+```{r}
+#Test at 5% and 1% significance. Calculate the p-value of the test
+
+#Taking sample of 121 ages
+fares2<- titanic$Fare[200:321]
+
+# Step1) Writing null and alternative hypothesis 
+
+# H0:mean of age is<=30
+# H1:mean of age is>30
+
+# Its a one-sided tail test
+
+# Step2) Cal the mean,sd and SE
+
+fares2<- titanic$Fare[200:321]
+
+head(fares2)
+
+mean(fares2)
+
+sd(fares2)
+SE <- sd(fares2)/sqrt(121)
+SE
+
+# Step3) Finding T Score
+# T= x- hyphosis_mean(x) / SE
+
+# T = 48.72579 - 30 / SE
+
+# T= 2.85   
+
+# Finding Critical T value and comapring
+# as degree of freedom is 120 and we are caluclation at alpha=0.05 (95%)
+qt(.95,120)
+
+# t = 1.658
+
+# 2.85 > 1.658 i.e  T> t
+
+#### As per decision rule if absoulte value of T score > critical T, we reject Null Hyphothesis
+
+#### We accept the Alternate Hyphothesis test
+
+#### So, at this level of significance we can say that average fare is >30
+
+
+
+# T test for 95% confidence interval
+t.test(fares2,mu=30,alternative = "greater",conf.level = .95)
+
+
+
+# Step4) Finding P value
+
+pt(2.85,120,lower.tail = FALSE)
+```
+
+<br>
+<b><i>
+The p-value is .002
+
+1) .002 < 0.05 i.e P < alpha so as per decision rule we reject the null hyphothsis.
+
+2) So at 5% significance level we can say that the average fare is >30
+
+3) The result is Significant.
+
+
+-> If we test at 1% significat level
+
+1) .002 < 0.01 i.e P < alpha therefore, we reject the null hypothesis.
+
+2) So at 1% significance level we can say that average fare is >30.
+
+3) The result is Significant.    
+</i></b>
+
+
+<br>
+<b> See if Fare in Queenstown and Fares in vSouthampton wrt Pclass 3 are same</b>
+
+```{r}
+#### Independent Samples but variance assumed to be equal
+
+#Test at 5% and 1% significance. Calculate the p-value of the test
+
+fare_prices4 <- sqldf("select fare from titanic where Embarked=='Queenstown' and Pclass=3")
+fare_prices5 <- sqldf("select fare from titanic where Embarked=='vSouthampton' and Pclass=3 limit 24")
+
+Fare_Compare<-cbind(fare_prices4,fare_prices5)
+colnames(Fare_Compare)<-c("Queenstown","vSouthampton")
+
+
+head(Fare_Compare)
+```
+
+
+```{r}
+#Taking sample of 121 ages
+
+# Step1) Writing null and alternative hypothesis 
+
+# H0: mean(Q) = mean(V)  i.e mean(Q) - mean(V) = 0
+# H1: mean(Q) != mean(V) i.e mean(Q) - mean(V) != 0
+
+
+# Step2) Cal the mean,sd and SE
+
+head(Fare_Compare)
+
+m1<-mean(Fare_Compare$Queenstown)  
+m1
+
+m2<-mean(Fare_Compare$vSouthampton)
+m2
+
+sd(Fare_Compare$Queenstown)      
+sd(Fare_Compare$vSouthampton)
+
+#Calculating Standard Error
+SE1 <- sd(Fare_Compare$vSouthampton)/sqrt(48)
+SE2 <- sd(Fare_Compare$Queenstown)/sqrt(48)
+
+SE<-SE1+SE2 # SE-> Standard Error
+SE
+
+nrow(Fare_Compare)
+
+
+#Step3) Calculate unbiased estimator i.e pooled sample variance
+
+#degree_freedom<- 24+24-2 
+degree_freedom= 46
+
+# using formula of Pooled variance -> (n1-1)*sd1^2 + (n2-1)*sd2^2 /(n1+n2-2) 
+pooled_variance <- 23*8.84^2 + 23*12.75^2 /46  
+polled_variance<-120.354
+polled_sd<- sqrt(120.354)
+polled_sd
+
+# Step4) Finding T Score
+#t_score <- diff of sample mean - diff of hyphothsis mean / SE
+
+#t_score <- (m2 - m1) - 0 /SE
+t_score <-5.428/SE
+t_score
+
+
+# Step5) Finding Critical T value and comapring
+
+#Degree of freedom is 24 +24 -2 =46 and confidence level is 95%
+qt(.95,46)
+
+# 1.71 > 1.678 i.e  T> t
+
+#### As per decision rule if absoulte value of T score > critical t, we reject Null Hyphothesis
+
+#### We accept the Alternate Hyphothesis test'
+
+#### The Result is Significant
+
+####-> So, at 95% level of significance we can say that average fare of Queenstown and Fares in vSouthampton wrt Pclass 3 are NOT SAME
+
+# Step4) Finding P value
+
+pt(1.71,46,lower.tail = FALSE)
+```
+<br>
+
+<b><i>
+1) .047 < 0.05 i.e P < alpha so as per decision rule we reject the null hyphothsis.
+
+2) So at 5% significance level we can say that the average fare of Queenstown and Fares in vSouthampton wrt Pclass 3 are not same
+
+3) The result is Significant
+
+-> If we test at 1% significat level
+
+1) .047 > 0.01 i.e P > alpha i.e P > alpha so as per decision rule we accept the null hyphothsis
+
+2) We see if we take at 1% significant level, We have to accept Null Hyphothsis i.e average fare of both are same.
+
+3) The result won't be Significant
+
+4) So upto .047 the result is significant after that result is not significant. 
+
+
+5)Its upto statistician which value he want to take.  
+</i></b>
+
+
+<br>
+<b>Check if there is fare discrimination based on gender </b>
+
+```{r}
+#### Independent sample unknown variance assumed to be equal
+
+titanic_male<- titanic[titanic$Sex=="male",]
+nrow(titanic_male)
+
+titanic_female<- titanic[titanic$Sex=="female",]
+nrow(titanic_female)
+
+# Step1) Writing Null and Alternative Hyphothesis 
+
+# H0: Mean_Fare_Male = Mean_fare_Female  i.e  mean(M) - mean(F) = 0
+# H1: Mean_Fare_Male != Mean_fare_Female  i.e  mean(M) - mean(F) != 0
+
+# Step2) Cal Mean, Sd of Sal wrt
+
+m1<-mean(titanic_male$Fare)
+m1
+
+m2<-mean(titanic_female$Fare)
+m2
+
+sd(titanic_male$Fare)      
+sd(titanic_female$Fare)
+
+#Finding standard error
+
+SE1<-sd(titanic_male$Fare)/sqrt(nrow(titanic_male))
+SE2<-sd(titanic_female$Fare)/sqrt(nrow(titanic_female)) 
+SE <- SE1 + SE2
+SE
+
+# Step3) Cal Pooled Sample variance
+
+#degree_freedom<- 453+261-2 
+degree_freedom = 712
+
+# using formula of Pooled variance -> (n1-1)*sd1^2 + (n2-1)*sd2^2 /(n1+n2-2)
+pooled_variance <- 452*45.84189^2 + 260*61.34685^2 /712
+polled_variance<-2708.374
+polled_sd<- sqrt(2708.374)
+polled_sd
+
+# Step4) Finding T score
+
+# T_score <- (m2 - m1) - 0 /SE
+T_score <-m2-m1
+T_score <- T_score/SE
+T_score
+
+# Step5) Finding Critical t value and comapring
+
+#Degree of freedom is 24 +24 -2 =46 and confidence level is 95%
+qt(.95,712)
+
+# 3.41 > 1.64 i.e  T> t
+
+#### As per decision rule if absoulte value of T score > critical t, we reject Null Hyphothesis
+
+#### We accept the Alternate Hyphothesis test'
+
+#### The Result is Significant
+
+####-> So, at  95% level of significance we can say thattheir is fare discrimination based on gender.
+
+
+# Step 6) Cal P value
+
+pt(3.4,712,lower.tail = FALSE)
+
+```
+<br>
+
+<b><i>
+The p-value is .000356  
+
+1) At 5% significance level
+
+2) .000356 < 0.05 i.e P < alpha #-> So as per deciction rule we reject the NULL hyphothesis
+
+3) So at 5% significance level we can say that their is fare discrimination based on gender.
+
+4) The result is Significant
+
+
+-> If we test at 1% significat level
+
+1) .000356 < 0.01 i.e P < alpha So as per deciction rule we reject the NULL hyphothesis
+
+
+2) So at 1% significance level we can say that their is fare discrimination based on gender.
+
+
+3) The result is Significant  </i></b>
+
+
+<br>
+  <b>We can go more indepth to see the fare discrimination </b>
+<br>
+
+
+<b>Check if there is fare discrimination based on gender above 35 and below 35</b>
+
+```{r}
+####Independent sample unknown variance assumed to be equal 
+
+# Above 35
+titanic_male_above35<- titanic[titanic$Age>35 & titanic$Sex=="male",]
+nrow(titanic_male_above35)
+
+titanic_female_above35<- titanic[titanic$Age>35 & titanic$Sex=="female",]
+nrow(titanic_female_above35)
+
+# Below 35
+titanic_male_below35<- titanic[titanic$Age<35 & titanic$Sex=="male",]
+nrow(titanic_male_below35)
+
+titanic_female_below35<- titanic[titanic$Age<35 & titanic$Sex=="female",]
+nrow(titanic_female_below35)
+
+### Finding for Above Above 35
+
+# Step1) Writing Null and Alternative Hyphothesis 
+
+# H0: Mean_Fare_male_Above35 = Mean_fare_female_Above35  i.e  mean(M) - mean(F) = 0
+# H1: Mean_Fare_male_Above35 != Mean_fare_female_Above35  i.e  mean(M) - mean(F) != 0
+
+# Step2) Cal Mean, Sd of Sal wrt
+
+m1<-mean(titanic_male_above35$Fare)    
+m1
+
+m2<-mean(titanic_female_above35$Fare)
+m2
+
+sd(titanic_male_above35$Fare)      
+sd(titanic_female_above35$Fare)
+
+#Calculating Standard Error
+
+SE1 <- sd(titanic_male_above35$Fare)/sqrt(nrow(titanic_male_above35))
+SE2 <- sd(titanic_female_above35$Fare)/sqrt(nrow(titanic_female_above35))
+SE <- SE1 + SE2
+SE  # Standard Error
+
+
+# Step3) Cal Pooled Sample variance
+
+#degree_freedom<- 144+73-2 
+degree_freedom= 214
+
+# using formula of Pooled variance -> (n1-1)*sd1^2 + (n2-1)*sd2^2 /(n1+n2-2)
+pooled_variance <- 143*53.19955^2 + 72*57.84898^2 /215 
+polled_variance<-3003.097
+polled_variance
+polled_sd<- sqrt(polled_variance)
+polled_sd
+
+
+# Step4) Finding T score
+#T_score <- (m2 - m1) - 0 /SE
+T_score =  (m2-m1)/SE 
+T_score
+
+```
+
+->We can directly go for finding P value also instead of finding critical t value and comparing first
+
+```{r}
+# Step 5) Cal P value
+pt(2.35,215,lower.tail = FALSE)
+
+```
+<br>
+
+<b><i>
+So the p value is 0.009
+
+1) At 5% significance level
+
+2) .009 < 0.05 i.e P < alpha 
+
+3) So as per deciction rule we reject the NULL hyphothesis
+
+4) So at 5% significance level we can say that their is fare discrimination based on gender of age above 35.
+
+
+-> The result is Significant
+
+
+1) If we test at 1% significat level
+
+2) .009 < 0.01 i.e P < alpha 
+
+3) So as per deciction rule we reject the NULL hyphothesis
+
+4) So at 1% significance level we can say that their is fare discrimination based on gender of age above 35.
+
+
+5) The result is Significant   </i></b>
+
+
+<br>
+<b>Finding for Age Below 35 </b>
+
+```{r}
+# Step1) Writing Null and Alternative Hyphothesis 
+
+# H0: Mean_Fare_male_Below35 = Mean_fare_female_Below35  i.e  mean(M) - mean(F) = 0
+# H1: Mean_Fare_male_Below35 != Mean_fare_female_Below35  i.e  mean(M) - mean(F) != 0
+
+# Step2) Cal Mean, Sd of Sal wrt
+
+m1<-mean(titanic_male_below35$Fare)    
+m1
+
+m2<-mean(titanic_female_below35$Fare)    
+m2
+
+sd(titanic_male_below35$Fare)
+sd(titanic_female_below35$Fare)
+
+
+#Calculating Standard Error
+
+SE1 <- sd(titanic_male_below35$Fare)/sqrt(nrow(titanic_male_below35))
+SE2 <- sd(titanic_female_below35$Fare)/sqrt(nrow(titanic_female_below35))
+SE <- SE1 + SE2
+SE  # Standard Error
+```
+
+```{r}
+# Step3) Cal Pooled Sample variance
+
+#degree_freedom<- 299+180-2 
+degree_freedom= 477
+
+# using formula of Pooled variance -> (n1-1)*sd1^2 + (n2-1)*sd2^2 /(n1+n2-2)
+pooled_variance <- 299*31.26985^2 + 180*51.83092^2 /477
+polled_variance<-1626.673
+polled_variance
+polled_sd<- sqrt(polled_variance)
+polled_sd
+
+# Step4) Finding T score
+#T_score <- (m2 - m1) - 0 /SE
+T_score <-  (m2-m1)
+T_score <- T_score/SE
+T_score
+```
+
+<b>
+We can directly go for finding P value also instead of finding critical t value and comparing first.</b>
+
+```{r}
+# Step 5) Calculate P value
+pt(2.89,477,lower.tail = FALSE)
+```
+<br>
+
+<b><i>
+
+The P value is 0.002
+
+1) At 5% significance level
+
+2) .002 < 0.05 i.e P < alpha 
+
+3) So as per deciction rule we reject the NULL hyphothesis
+
+4) So at 5% significance level we can say that their is fare discrimination based on gender of age below 35.
+
+5) The result is Significant
+
+
+-> If we test at 1% significat level
+
+1) .002 < 0.01 i.e P < alpha 
+
+2) So as per deciction rule we reject the NULL hyphothesis
+
+3) So at 1% significance level we can say that their is fare discrimination based on gender of age below 35.
+
+
+4) The result is Significant  </i></b>
+
+
+<br>
+<b>Comparing mean age of survived and non survived</b>
+
+```{r}
+class(titanic$Age)
+class(titanic$Survived)
+
+boxplot(titanic$Age~titanic$Survived,col=rainbow(2),main="BoxPlot of Survival vs Age")
+
+#finding variance, sd and coff of variation 
+var(titanic$Age[titanic$Survived=="Survived"])
+var(titanic$Age[titanic$Survived=="Not Survivied"])
+
+v1<-sd(titanic$Age[titanic$Survived=="Survived"])
+v1
+
+v2<-sd(titanic$Age[titanic$Survived=="Not Survivied"])
+v2
+
+v3<-mean(titanic$Age[titanic$Survived=="Survived"])
+v3
+
+v4<-mean(titanic$Age[titanic$Survived=="Not Survivied"])
+v4
+
+cov_age_survived<- v1/v3
+cov_age_survived
+
+cov_age_not_survived<- v2/v4
+cov_age_not_survived
+
+
+#H0: Mean age of survived = not survived   i.e  Mean age of survived
+#H1: Mean age of survived != not survived
+
+####non equal variance , 2 sided test, Independent groups i.e not paired.
+
+t.test(titanic$Age~titanic$Survived,mu=0,alt="two.sided",conf=0.95,var.eq=F,paired=F)
+
+```
+<br>
+<b><i>
+
+1) As P value is 0.04 < .05 conf so we reject the null hyphothisis.
+
+
+2) Mean age of survived and not survived are different.  </i></b>
+
+```{r}
+kruskal.test(titanic$Age~titanic$Survived)
+
+#### Using Kruskal test also we can conclude Mean age of survived and not survived are different
+
+```
