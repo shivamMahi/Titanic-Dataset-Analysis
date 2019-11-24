@@ -1,6 +1,6 @@
 # Titanic-Dataset-Analysis
 
--The dataset is taken from Kaggle.
+-The dataset is taken from Kaggle (Titanic: Machine Learning from Disaster).
 
 -Titanic dataset contains 891 rows and 12 columns.
 
